@@ -18,7 +18,8 @@ db = firestore.client()
 @app.route("/whatsapp", methods=['POST'])
 def whatsapp():
     incoming_msg = request.values.get('Body', '').strip().lower()
-    user_id = request.values.get('From', '')  # Unique user number from Twilio
+    user_id = request.values.get('From', '').replace('whatsapp:', '')
+
 
     resp = MessagingResponse()
     msg = resp.message()
