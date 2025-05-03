@@ -17,9 +17,9 @@ db = firestore.client()
 
 @app.route("/whatsapp", methods=['POST'])
 def whatsapp():
-    incoming_msg = request.values.get('Body', '').strip().lower()
-    user_id = request.values.get('From', '').replace('whatsapp:', '')
-
+    incoming_msg_raw = request.values.get('Body', '')
+    incoming_msg = incoming_msg_raw.strip().lower()
+    user_id = request.values.get('From', '').replace('whatsapp:', '').strip()
 
     resp = MessagingResponse()
     msg = resp.message()
@@ -45,12 +45,12 @@ def whatsapp():
                 msg.body(job_text)
 
     elif incoming_msg.startswith("set role:"):
-        role = incoming_msg.replace("set role:", "").strip().title()
+        role = incoming_msg_raw.split(":", 1)[1].strip().title()
         db.collection("preferences").document(user_id).set({"role": role}, merge=True)
         msg.body(f"✅ Role set to: {role}")
 
     elif incoming_msg.startswith("set location:"):
-        location = incoming_msg.replace("set location:", "").strip().title()
+        location = incoming_msg_raw.split(":", 1)[1].strip().title()
         db.collection("preferences").document(user_id).set({"location": location}, merge=True)
         msg.body(f"📍 Location set to: {location}")
 
