@@ -3,11 +3,15 @@ from twilio.twiml.messaging_response import MessagingResponse
 import firebase_admin
 from firebase_admin import credentials, firestore
 from scraper.job_scraper import scrape_jsearch
+import os
+import json
 
 app = Flask(__name__)
 
-# Initialize Firebase
-cred = credentials.Certificate("firebase_credentials.json")
+# Initialize Firebase from env variable
+firebase_creds = os.getenv("FIREBASE_CREDS")
+cred_dict = json.loads(firebase_creds)
+cred = credentials.Certificate(cred_dict)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -63,6 +67,4 @@ def whatsapp():
     return str(resp)
 
 if __name__ == "__main__":
-    import os
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
-
