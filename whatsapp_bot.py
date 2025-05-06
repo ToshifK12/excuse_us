@@ -5,6 +5,7 @@ from firebase_admin import credentials, firestore
 from scraper.job_scraper import scrape_jsearch
 import os
 import json
+import re
 
 app = Flask(__name__)
 
@@ -23,11 +24,15 @@ def whatsapp():
     resp = MessagingResponse()
     msg = resp.message()
 
+    # Match "position Teacher", "location Florida", case-insensitively
+    role_match = re.match(r"position\s*[:\-]?\s*(.+)", incoming_msg, re.IGNORECASE)
+    location_match = re.match(r"location\s*[:\-]?\s*(.+)", incoming_msg, re.IGNORECASE)
+
     if incoming_msg == "find jobs":
         doc = db.collection("preferences").document(user_id).get()
 
         if not doc.exists:
-            msg.body("⚠️ Please set your role and location first.\n\nUse:\n• Set role: Data Analyst\n• Set location: Florida")
+            msg.body("⚠️ Please set your position and location first.")
             return str(resp)
 
         prefs = doc.to_dict()
@@ -43,32 +48,18 @@ def whatsapp():
                 job_text = f"*{job['title']}*\n{job['company']}\nApply: {job['link']}"
                 msg.body(job_text)
 
-    elif incoming_msg.startswith("set role:"):
-        role = incoming_msg.replace("set role:", "").strip().title()
+    elif role_match:
+        role = role_match.group(1).strip().title()
         db.collection("preferences").document(user_id).set({"role": role}, merge=True)
-        msg.body(f"✅ Role set to: {role}")
+        msg.body(f"✅ Position set to: {role}")
 
-    elif incoming_msg.startswith("set location:"):
-        location = incoming_msg.replace("set location:", "").strip().title()
+    elif location_match:
+        location = location_match.group(1).strip().title()
         db.collection("preferences").document(user_id).set({"location": location}, merge=True)
         msg.body(f"📍 Location set to: {location}")
 
-    elif incoming_msg == "show prefs":
-        doc = db.collection("preferences").document(user_id).get()
-        if doc.exists:
-            prefs = doc.to_dict()
-            msg.body(f"🧠 Your Preferences:\n• Role: {prefs.get('role', '-')}\n• Location: {prefs.get('location', '-')}")
-        else:
-            msg.body("ℹ️ No preferences found.\nUse:\n• Set role: Developer\n• Set location: Florida")
-
     else:
-        msg.body(
-            "👋 Hello Beavers! Welcome to *Excuse_us by Toshif Khan* 👨‍💻\n\n"
-            "You can control me with:\n"
-            "• Set role: Data Analyst\n"
-            "• Set location: Florida\n"
-            "• Find jobs"
-        )
+        msg.body("👋 Hello Beavers, Welcome to *Excuse_us* by Toshif Khan!\n\nUse:\n• Position Teacher\n• Location Florida\n• Find jobs")
 
     return str(resp)
 
