@@ -18,17 +18,20 @@ db = firestore.client()
 
 @app.route("/whatsapp", methods=['POST'])
 def whatsapp():
-    incoming_msg = request.values.get('Body', '').strip().lower()
+    incoming_msg = request.values.get('Body', '').strip()
     user_id = request.values.get('From', '').replace('whatsapp:', '')
 
     resp = MessagingResponse()
     msg = resp.message()
 
-    # Match "position Teacher", "location Florida", case-insensitively
-    role_match = re.match(r"position\s*[:\-]?\s*(.+)", incoming_msg, re.IGNORECASE)
-    location_match = re.match(r"location\s*[:\-]?\s*(.+)", incoming_msg, re.IGNORECASE)
+    # Normalize message for flexible matching
+    msg_lower = incoming_msg.lower()
 
-    if incoming_msg == "find jobs":
+    # Match flexible commands
+    role_match = re.match(r"(position|set\s*role)\s*[:\-]?\s*(.+)", msg_lower, re.IGNORECASE)
+    location_match = re.match(r"(location|set\s*location)\s*[:\-]?\s*(.+)", msg_lower, re.IGNORECASE)
+
+    if msg_lower == "find jobs":
         doc = db.collection("preferences").document(user_id).get()
 
         if not doc.exists:
@@ -49,17 +52,23 @@ def whatsapp():
                 msg.body(job_text)
 
     elif role_match:
-        role = role_match.group(1).strip().title()
+        role = role_match.group(2).strip().title()
         db.collection("preferences").document(user_id).set({"role": role}, merge=True)
         msg.body(f"✅ Position set to: {role}")
 
     elif location_match:
-        location = location_match.group(1).strip().title()
+        location = location_match.group(2).strip().title()
         db.collection("preferences").document(user_id).set({"location": location}, merge=True)
         msg.body(f"📍 Location set to: {location}")
 
     else:
-        msg.body("👋 Hello Beavers, Welcome to *Excuse_us* by Toshif Khan!\n\nUse:\n• Position Teacher\n• Location Florida\n• Find jobs")
+        msg.body(
+            "👋 Hello Beavers! Welcome to *Excuse_us* by Toshif Khan 👨‍💻\n\n"
+            "You can control me with:\n"
+            "•⁠  ⁠Position: Data Analyst\n"
+            "•⁠  ⁠Location: Florida\n"
+            "•⁠  ⁠Find jobs"
+        )
 
     return str(resp)
 
